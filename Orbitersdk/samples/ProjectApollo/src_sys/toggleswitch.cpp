@@ -3630,7 +3630,11 @@ double MeterSwitch::GetDisplayValue() {
 		double dt = oapiGetSimTime() - lastDrawTime; // oapiGetSimTime() - lastDrawTime;
 		if (dt > 0) {
 			if (fabs(value - displayValue) / dt > (maxValue - minValue) / minMaxTime) {
-				displayValue += ((value - displayValue) / fabs(value - displayValue)) * (maxValue - minValue) / minMaxTime * dt;
+				// discrete time LPF where current = current*(1 - 1/tau) + new*(1/tau)
+				// assumed that 5tau is minMaxTime
+				// therefore 1/tau is (5/minMaxTime) for each slice {dt}.  picking 10 instead because 5 appears sluggish.
+				double invtau = max(min(dt * 10/minMaxTime, 1.0),0.0);
+				displayValue = (displayValue * (1-invtau) + (value * invtau));
 			} else {
 				displayValue = value;
 			}
