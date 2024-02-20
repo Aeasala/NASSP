@@ -3579,7 +3579,7 @@ void MeterSwitch::Register(PanelSwitchScenarioHandler &scnh, char *n, double min
 	name = n;
 	value = defaultValue;
 	displayValue = defaultValue;
-	inertia = 0.0;
+	momentum = 0.0;
 	minValue = min;
 	maxValue = max;
 	minMaxTime = time;
@@ -3635,16 +3635,16 @@ double MeterSwitch::GetDisplayValue() {
 			// therefore 1/tau is (5/minMaxTime) for each slice {dt}.  picking 10 instead because 5 appears sluggish.
 			double invtau = max(min(dt * 10/minMaxTime, 1.0),0.0);
 
-			// accumulate inertia
-			inertia += (displayValue - value);
+			// accumulate momentum
+			momentum += (displayValue - value);
 
-			// inertia limited to 40% of range
-			inertia = max(min(inertia, 0.4*(maxValue-minValue)), -0.4*(maxValue - minValue));
-			displayValue = (displayValue * (1-invtau) + (value * invtau)) - (inertia * dt/minMaxTime);
+			// momentum limited to 40% of range
+			momentum = max(min(momentum, 0.4*(maxValue-minValue)), -0.4*(maxValue - minValue));
+			displayValue = (displayValue * (1-invtau) + (value * invtau)) - (momentum * dt/minMaxTime);
 
 			// ceiling/floor for springiness
 			if (displayValue <= minValue || displayValue >= maxValue) {
-				inertia = 0;
+				momentum = 0;
 			}
 		}
 	}
