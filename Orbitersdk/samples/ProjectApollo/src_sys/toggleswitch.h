@@ -1338,7 +1338,7 @@ protected:
 	double minValue;
 	double maxValue;
 	double minMaxTime;
-	double int_error = 0.0f;
+	double inertia;
 	SwitchRow *switchRow;
 	double lastDrawTime;
 
