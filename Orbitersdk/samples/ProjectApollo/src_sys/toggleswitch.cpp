@@ -3579,6 +3579,7 @@ void MeterSwitch::Register(PanelSwitchScenarioHandler &scnh, char *n, double min
 	name = n;
 	value = defaultValue;
 	displayValue = defaultValue;
+	int_error = 0.0;
 	minValue = min;
 	maxValue = max;
 	minMaxTime = time;
@@ -3629,14 +3630,21 @@ double MeterSwitch::GetDisplayValue() {
 	} else {
 		double dt = oapiGetSimTime() - lastDrawTime; // oapiGetSimTime() - lastDrawTime;
 		if (dt > 0) {
-			if (fabs(value - displayValue) / dt > (maxValue - minValue) / minMaxTime) {
-				// discrete time LPF where current = current*(1 - 1/tau) + new*(1/tau)
-				// assumed that 5tau is minMaxTime
-				// therefore 1/tau is (5/minMaxTime) for each slice {dt}.  picking 10 instead because 5 appears sluggish.
-				double invtau = max(min(dt * 10/minMaxTime, 1.0),0.0);
-				displayValue = (displayValue * (1-invtau) + (value * invtau));
-			} else {
-				displayValue = value;
+			// discrete time LPF where current = current*(1 - 1/tau) + new*(1/tau)
+			// assumed that 5tau is minMaxTime
+			// therefore 1/tau is (5/minMaxTime) for each slice {dt}.  picking 10 instead because 5 appears sluggish.
+			double invtau = max(min(dt * 10/minMaxTime, 1.0),0.0);
+
+			// accumulate integral term (springiness)
+			int_error += (displayValue - value);
+
+			// limit integral term (no windup).  not good in the sense that it's not normalized to some value/ratio, but don't want divide-by-zero stuff happening
+			int_error = max(min(int_error, 0.4*value), -0.4*value);
+			displayValue = (displayValue * (1-invtau) + (value * invtau)) - (int_error*dt/minMaxTime);
+
+			// ceiling/floor for springiness
+			if (displayValue <= minValue || displayValue >= maxValue) {
+				int_error = 0;
 			}
 		}
 	}
