@@ -71,6 +71,9 @@
 #define TIME_UPDATE_MINUTES 1
 #define TIME_UPDATE_HOURS	2
 
+// Lowpass filter for gauges assumes 5tau ~~ minMaxTime.  All 5tau components can be globally scaled by GAUGE_LPF_SCALAR if relationship does not hold well. (higher->faster)
+#define GAUGE_LPF_SCALAR 1.0
+
 class SwitchRow;
 class PanelSwitchScenarioHandler;
 class PanelSwitchCallbackInterface;
@@ -369,7 +372,7 @@ protected:
 	bool Active;
 	bool SwitchToggled;
 	bool Held;
-	//0 = not sideways, 1 = sideways rotated 90° clockwise, 2 = sideways rotated 90° counterclockwise
+	//0 = not sideways, 1 = sideways rotated 90ï¿½ clockwise, 2 = sideways rotated 90ï¿½ counterclockwise
 	int Sideways;
 
 	double delayTime;
