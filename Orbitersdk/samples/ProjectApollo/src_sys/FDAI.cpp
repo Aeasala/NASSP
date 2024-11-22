@@ -1,4 +1,4 @@
-/***************************************************************************
+﻿/***************************************************************************
   This file is part of Project Apollo - NASSP
   Copyright 2004-2005 Rob Conley, Markus Joachim
 
@@ -22,7 +22,7 @@
 
   **************************************************************************/
 
-// To force Orbitersdk.h to use <fstream> in any compiler version
+  // To force Orbitersdk.h to use <fstream> in any compiler version
 #pragma include_alias( <fstream.h>, <fstream> )
 #include "Orbitersdk.h"
 #include <stdio.h>
@@ -41,6 +41,7 @@ FDAI::FDAI() {
 	ScrY = 0;
 
 	target = _V(0, 0, 0);
+	targetIntermediate = _V(0, 0, 0);
 	now = _V(0, 0, 0);
 	lastRates = _V(0, 0, 0);
 	lastErrors = _V(0, 0, 0);
@@ -205,72 +206,90 @@ void FDAI::SetAttitude(VECTOR3 attitude) {
 
 void FDAI::RotateBall(double simdt) {
 
-	double delta, deltamax;
+	double delta, deltamax, dtFiltConstant;
 
-	deltamax = 0.87*simdt; //About 50�/s
-
-	delta = target.z - now.z;
+	deltamax = 0.87 * simdt; //About 50°/s
+	dtFiltConstant = 0.9;
+	delta = target.z - targetIntermediate.z;
 	if (delta > deltamax) {
 		if (delta > PI) {
+			targetIntermediate.z += 2 * PI;
 			now.z += 2 * PI;
 			RotateBall(simdt);
 			return;
 		}
-		now.z += deltamax;
+		targetIntermediate.z += deltamax;
+		now.z = now.z * dtFiltConstant + targetIntermediate.z * (1 - dtFiltConstant);
 
 	}
 	else if (delta < -deltamax) {
 		if (delta < -PI) {
+			targetIntermediate.z -= 2 * PI;
 			now.z -= 2 * PI;
 			RotateBall(simdt);
 			return;
 		}
-		now.z -= deltamax;
+		targetIntermediate.z -= deltamax;
+		now.z = now.z * dtFiltConstant + targetIntermediate.z * (1 - dtFiltConstant);
 	}
-	else
-		now.z += delta;
+	else {
+		targetIntermediate.z += delta;
+		now.z = now.z * dtFiltConstant + targetIntermediate.z * (1 - dtFiltConstant);
+	}
 
-	delta = target.y - now.y;
+	delta = target.y - targetIntermediate.y;
 	if (delta > deltamax) {
 		if (delta > PI) {
+			targetIntermediate.y += 2 * PI;
 			now.y += 2 * PI;
 			RotateBall(simdt);
 			return;
 		}
-		now.y += deltamax;
+		targetIntermediate.y += deltamax;
+		now.y = now.y * dtFiltConstant + targetIntermediate.y * (1 - dtFiltConstant);
 
 	}
 	else if (delta < -deltamax) {
 		if (delta < -PI) {
+			targetIntermediate.y -= 2 * PI;
 			now.y -= 2 * PI;
 			RotateBall(simdt);
 			return;
 		}
-		now.y -= deltamax;
+		targetIntermediate.y -= deltamax;
+		now.y = now.y * dtFiltConstant + targetIntermediate.y * (1 - dtFiltConstant);
 	}
-	else
-		now.y += delta;
+	else {
+		targetIntermediate.y += delta;
+		now.y = now.y * dtFiltConstant + targetIntermediate.y * (1 - dtFiltConstant);
+	}
 
-	delta = target.x - now.x;
+	delta = target.x - targetIntermediate.x;
 	if (delta > deltamax) {
 		if (delta > PI) {
+			targetIntermediate.x += 2 * PI;
 			now.x += 2 * PI;
 			RotateBall(simdt);
 			return;
 		}
-		now.x += deltamax;
+		targetIntermediate.x += deltamax;
+		now.x = now.x * dtFiltConstant + targetIntermediate.x * (1 - dtFiltConstant);
 
 	}
 	else if (delta < -deltamax) {
 		if (delta < -PI) {
+			targetIntermediate.x -= 2 * PI;
 			now.x -= 2 * PI;
 			RotateBall(simdt);
 			return;
 		}
-		now.x -= deltamax;
+		targetIntermediate.x -= deltamax;
+		now.x = now.x * dtFiltConstant + targetIntermediate.x * (1 - dtFiltConstant);
 	}
-	else
-		now.x += delta;
+	else {
+		targetIntermediate.x += delta;
+		now.x = now.x * dtFiltConstant + targetIntermediate.x * (1 - dtFiltConstant);
+	}
 }
 
 void FDAI::MoveBall2D()
@@ -492,11 +511,11 @@ void FDAI::SystemTimestep(double simdt) {
 	}
 }
 
-int FDAI::LoadOGLBitmap(char *filename) {
+int FDAI::LoadOGLBitmap(char* filename) {
 
-	unsigned char *l_texture;
+	unsigned char* l_texture;
 	int l_index, l_index2 = 0;
-	FILE *file;
+	FILE* file;
 	BITMAPFILEHEADER fileheader;
 	BITMAPINFOHEADER infoheader;
 	RGBTRIPLE rgb;
@@ -508,10 +527,10 @@ int FDAI::LoadOGLBitmap(char *filename) {
 	fseek(file, sizeof(fileheader), SEEK_SET);
 	fread(&infoheader, sizeof(infoheader), 1, file);
 
-	l_texture = (byte *)malloc(infoheader.biWidth * infoheader.biHeight * 4);
+	l_texture = (byte*)malloc(infoheader.biWidth * infoheader.biHeight * 4);
 	memset(l_texture, 0, infoheader.biWidth * infoheader.biHeight * 4);
 
-	for (l_index = 0; l_index < infoheader.biWidth*infoheader.biHeight; l_index++)
+	for (l_index = 0; l_index < infoheader.biWidth * infoheader.biHeight; l_index++)
 	{
 		fread(&rgb, sizeof(rgb), 1, file);
 
@@ -615,7 +634,7 @@ typedef struct ssBGR {
 	unsigned char pad;
 } sBGR;
 
-typedef sBGR *pBGR;
+typedef sBGR* pBGR;
 #pragma pack(pop)
 
 // Returns the DI (Device Independent) bits of the Bitmap
@@ -708,7 +727,7 @@ void FDAI::AnimateFDAI(VECTOR3 rates, VECTOR3 errors, UINT animR, UINT animP, UI
 //
 
 
-void FDAI::SaveState(FILEHANDLE scn, char *start_str, char *end_str)
+void FDAI::SaveState(FILEHANDLE scn, char* start_str, char* end_str)
 
 {
 	oapiWriteLine(scn, start_str);
@@ -729,10 +748,10 @@ void FDAI::SaveState(FILEHANDLE scn, char *start_str, char *end_str)
 	oapiWriteLine(scn, end_str);
 }
 
-void FDAI::LoadState(FILEHANDLE scn, char *end_str)
+void FDAI::LoadState(FILEHANDLE scn, char* end_str)
 
 {
-	char *line;
+	char* line;
 	float flt = 0;
 	int end_len = strlen(end_str);
 
