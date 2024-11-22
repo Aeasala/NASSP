@@ -209,7 +209,9 @@ void FDAI::RotateBall(double simdt) {
 	double delta, deltamax, dtFiltConstant;
 
 	deltamax = 0.87 * simdt; //About 50°/s
-	dtFiltConstant = 0.9;
+	// simdt is divide-protected to 15fps@100x, 300fps@0.1x
+	dtFiltConstant = max(min(secOrdFilterConstant / min(max(simdt, 0.0001),7.0), 0.99), 0.01);
+	//dtFiltConstant = 0.9;
 	delta = target.z - targetIntermediate.z;
 	if (delta > deltamax) {
 		if (delta > PI) {
@@ -397,22 +399,25 @@ void FDAI::PaintMe(VECTOR3 rates, VECTOR3 errors, SURFHANDLE surf, SURFHANDLE hF
 		lastRates = rates;
 	else
 		rates = lastRates;
+	rateFilt.x = 0.6 * rateFilt.x + 0.4 * rates.x;
+	rateFilt.y = 0.6 * rateFilt.y + 0.4 * rates.y;
+	rateFilt.z = 0.6 * rateFilt.z + 0.4 * rates.z;
 
 	int targetX, targetY, targetZ;
 
 	if (!LM_FDAI)
 	{
 		//Input is scaled -1.0 to 1.0, this scales to 126 pixels
-		targetX = (int)(117 - (63.0 * rates.z));
-		targetY = (int)(117 + (63.0 * rates.x));
-		targetZ = (int)(117 + (63.0 * rates.y));
+		targetX = (int)(117 - (63.0 * rateFilt.z));
+		targetY = (int)(117 + (63.0 * rateFilt.x));
+		targetZ = (int)(117 + (63.0 * rateFilt.y));
 	}
 	else
 	{
 		//Input is scaled -1.0 to 1.0, this scales to 100 pixels
-		targetX = (int)(119 - (50.0*rates.z));
-		targetY = (int)(120 + (50.0*rates.x));
-		targetZ = (int)(119 + (50.0*rates.y));
+		targetX = (int)(119 - (50.0 * rateFilt.z));
+		targetY = (int)(120 + (50.0 * rateFilt.x));
+		targetZ = (int)(119 + (50.0 * rateFilt.y));
 	}
 
 	// Enforce Limits
@@ -465,27 +470,30 @@ void FDAI::PaintMe(VECTOR3 rates, VECTOR3 errors, SURFHANDLE surf, SURFHANDLE hF
 		lastErrors = errors;
 	else
 		errors = lastErrors;
+	errorFilt.x = 0.85 * errorFilt.x + 0.15 * errors.x;
+	errorFilt.y = 0.85 * errorFilt.y + 0.15 * errors.y;
+	errorFilt.z = 0.85 * errorFilt.z + 0.15 * errors.z;
 	if (!LM_FDAI)
 	{
-		targetY = (int)(fabs(errors.x) * 0.268292);
-		oapiBlt(surf, hFDAINeedles, 122 + (int)errors.x, 42 + targetY, 0, 0, 2, 72 - targetY, SURF_PREDEF_CK);
+		targetY = (int)(fabs(errorFilt.x) * 0.268292);
+		oapiBlt(surf, hFDAINeedles, 122 + (int)errorFilt.x, 42 + targetY, 0, 0, 2, 72 - targetY, SURF_PREDEF_CK);
 		// Draw Pitch-Error Needle
-		targetY = (int)(fabs(errors.y) * 0.268292);
-		oapiBlt(surf, hFDAINeedles, 135, 122 + (int)errors.y, 4, 0, 69 - targetY, 2, SURF_PREDEF_CK);
+		targetY = (int)(fabs(errorFilt.y) * 0.268292);
+		oapiBlt(surf, hFDAINeedles, 135, 122 + (int)errorFilt.y, 4, 0, 69 - targetY, 2, SURF_PREDEF_CK);
 		// Draw Yaw-Error Needle
-		targetY = (int)(fabs(errors.z) * 0.268292);
-		oapiBlt(surf, hFDAINeedles, 122 + (int)errors.z, 135, 0, 0, 2, 69 - targetY, SURF_PREDEF_CK);
+		targetY = (int)(fabs(errorFilt.z) * 0.268292);
+		oapiBlt(surf, hFDAINeedles, 122 + (int)errorFilt.z, 135, 0, 0, 2, 69 - targetY, SURF_PREDEF_CK);
 	}
 	else
 	{
-		targetY = (int)(fabs(errors.x) * 0.268292);
-		oapiBlt(surf, hFDAINeedles, 122 + (int)errors.x, 54 + targetY, 0, 0, 2, 31 - targetY, SURF_PREDEF_CK);
+		targetY = (int)(fabs(errorFilt.x) * 0.268292);
+		oapiBlt(surf, hFDAINeedles, 122 + (int)errorFilt.x, 54 + targetY, 0, 0, 2, 31 - targetY, SURF_PREDEF_CK);
 		// Draw Pitch-Error Needle
-		targetY = (int)(fabs(errors.y) * 0.268292);
-		oapiBlt(surf, hFDAINeedles, 161, 122 + (int)errors.y, 3, 0, 31 - targetY, 2, SURF_PREDEF_CK);
+		targetY = (int)(fabs(errorFilt.y) * 0.268292);
+		oapiBlt(surf, hFDAINeedles, 161, 122 + (int)errorFilt.y, 3, 0, 31 - targetY, 2, SURF_PREDEF_CK);
 		// Draw Yaw-Error Needle
-		targetY = (int)(fabs(errors.z) * 0.268292);
-		oapiBlt(surf, hFDAINeedles, 122 + (int)errors.z, 161, 0, 0, 2, 31 - targetY, SURF_PREDEF_CK);
+		targetY = (int)(fabs(errorFilt.z) * 0.268292);
+		oapiBlt(surf, hFDAINeedles, 122 + (int)errorFilt.z, 161, 0, 0, 2, 31 - targetY, SURF_PREDEF_CK);
 	}
 
 
@@ -703,14 +711,14 @@ void FDAI::AnimateFDAI(VECTOR3 rates, VECTOR3 errors, UINT animR, UINT animP, UI
 	vessel->SetAnimation(animP, fdai_proc[1]);
 
 	// Drive error needles
-	vessel->SetAnimation(errorR, (errors.x + 46) / 92);
-	vessel->SetAnimation(errorP, (-errors.y + 46) / 92);
-	vessel->SetAnimation(errorY, (errors.z + 46) / 92);
+	vessel->SetAnimation(errorR, (errorFilt.x + 46) / 92);
+	vessel->SetAnimation(errorP, (-errorFilt.y + 46) / 92);
+	vessel->SetAnimation(errorY, (errorFilt.z + 46) / 92);
 
 	// Drive rate needles
-	rate_proc[0] = (-rates.z + 1) / 2;
-	rate_proc[1] = (-rates.x + 1) / 2;
-	rate_proc[2] = (rates.y + 1) / 2;
+	rate_proc[0] = (-rateFilt.z + 1) / 2;
+	rate_proc[1] = (-rateFilt.x + 1) / 2;
+	rate_proc[2] = (rateFilt.y + 1) / 2;
 	if (rate_proc[0] < 0) rate_proc[0] = 0;
 	if (rate_proc[1] < 0) rate_proc[1] = 0;
 	if (rate_proc[2] < 0) rate_proc[2] = 0;

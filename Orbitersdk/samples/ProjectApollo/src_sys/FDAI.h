@@ -27,7 +27,7 @@
 
 #include < GL\gl.h >                                
 #include < GL\glu.h >
-static double secOrdFilterConstant = 5;
+static double secOrdFilterConstant = 0.015;
 
 class FDAI {
 
@@ -59,6 +59,8 @@ protected:
 	int init;
 	int list_name; //we store the rendering into a display list
 	VECTOR3 now, target, lastRates, lastErrors, lastPaintAtt;
+	VECTOR3 errorFilt;
+	VECTOR3 rateFilt;
 	VECTOR3 targetIntermediate;
 	double lastPaintTime;
 	
